@@ -5,7 +5,7 @@ pub mod python_bindings;
 
 use rand::rng;
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Suit {
     Hearts,
     Diamonds,
@@ -37,7 +37,7 @@ impl Suit {
 }
 
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Rank {
     Two,
     Three,
@@ -73,7 +73,7 @@ impl Rank {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct Card {
     pub suit: Suit,
     pub rank: Rank,
@@ -204,6 +204,10 @@ impl Shoe {
 
     pub fn deal(&mut self) -> Option<Card> {
         self.shoe.deal()
+    }
+
+    pub fn len(&self) -> usize {
+        self.shoe.len()
     }
 }
 
