@@ -1,3 +1,8 @@
+/// Module for card-related structures and functions
+
+#[cfg(feature = "python")]
+mod python_bindings;
+
 use rand::rng;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
