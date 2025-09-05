@@ -1,14 +1,16 @@
 use std::collections::HashMap;
 use crate::cards::Shoe;
+use crate::cards::Card;
 
 pub struct Player {
     name: String,
     chips: HashMap<u32, u32>, // Map of chip denomination to quantity
+    hand: HashMap<Vec<Card>, HashMap<u32, u32>> // Map of hand to bet (denomination to quantity)
 }
 
 impl Player {
     pub fn new(name: String, starting_chips: HashMap<u32, u32>) -> Self {
-        Self { name, chips: starting_chips }
+        Self { name, chips: starting_chips, hand: HashMap::new() }
     }
 
     pub fn total_value(&self) -> u32 {
@@ -22,7 +24,7 @@ impl Player {
 
 
 pub struct Dealer {
-    // Dealer-specific attributes
+    dealer_hand: Vec<Card>,
 }
 
 pub struct BlackjackGame {
@@ -36,7 +38,7 @@ impl BlackjackGame {
     pub fn new(players: Vec<Player>, chip_denominations: Vec<u32>, num_decks: usize) -> Self {
         let shoe = Shoe::new(num_decks);
         Self {
-            dealer: Dealer {},
+            dealer: Dealer { dealer_hand: vec![] },
             players,
             chip_denominations,
             shoe,

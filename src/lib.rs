@@ -1,5 +1,5 @@
 pub mod cards;
 pub mod dice;
-mod roulette;
-mod slots;
-mod games;
+pub mod roulette;
+pub mod slots;
+pub mod games;
