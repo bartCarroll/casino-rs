@@ -1,7 +1,7 @@
 /// A module for Dice related functions.
 
 #[cfg(feature = "python")]
-mod python_bindings;
+pub mod python_bindings;
 
 use rand::Rng;
 
