@@ -31,17 +31,17 @@ pub struct RouletteNumber {
 }
 
 impl RouletteNumber {
-    pub fn new(number: u16, double_zero: bool, triple_zero: bool) -> Option<Self> {
+    pub fn new(number: u16) -> Option<Self> {
         match number {
             0 => Some(RouletteNumber {
                 number,
                 color: RouletteColor::Green,
             }),
-            37 if double_zero => Some(RouletteNumber {
+            37 => Some(RouletteNumber {
                 number,
                 color: RouletteColor::Green,
             }),
-            38 if triple_zero => Some(RouletteNumber {
+            38 => Some(RouletteNumber {
                 number,
                 color: RouletteColor::Green,
             }),
@@ -63,28 +63,24 @@ impl RouletteNumber {
 pub enum WheelType {
     American, // 0, 00
     European, // 0
-    French,  // 0 with special rules
-    TripleZero, // 0, 00, 000 (not commonly used)
+    TripleZero, // 0, 00, 000
 }
 
 impl WheelType {
     pub fn all() -> &'static [WheelType] {
-        &[WheelType::American, WheelType::European, WheelType::French, WheelType::TripleZero]
+        &[WheelType::American, WheelType::European, WheelType::TripleZero]
     }
 
     pub fn numbers(&self) -> Vec<RouletteNumber> {
         match self {
-            WheelType::American => (0..=38)
-                .filter_map(|n| RouletteNumber::new(n, true, false))
+            WheelType::American => (0..38)
+                .filter_map(|n| RouletteNumber::new(n))
                 .collect(),
             WheelType::European => (0..=36)
-                .filter_map(|n| RouletteNumber::new(n, false, false))
+                .filter_map(|n| RouletteNumber::new(n))
                 .collect(),
-            WheelType::French => (0..=36)
-                .filter_map(|n| RouletteNumber::new(n, false, false))
-                .collect(),
-            WheelType::TripleZero => (0..=39)
-                .filter_map(|n| RouletteNumber::new(n, false, true))
+            WheelType::TripleZero => (0..40)
+                .filter_map(|n| RouletteNumber::new(n))
                 .collect(),
         }
     }
@@ -104,5 +100,90 @@ impl RouletteWheel {
         let mut rng = rand::rng();
         let index = rng.random_range(0..numbers.len());
         numbers[index]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    pub use super::*;
+
+    #[test]
+    fn test_roulette_number_creation() {
+        assert_eq!(
+            RouletteNumber::new(0),
+            Some(RouletteNumber {
+                number: 0,
+                color: RouletteColor::Green
+            })
+        );
+        assert_eq!(
+            RouletteNumber::new(37),
+            Some(RouletteNumber {
+                number: 37,
+                color: RouletteColor::Green
+            })
+        );
+        assert_eq!(
+            RouletteNumber::new(38),
+            Some(RouletteNumber {
+                number: 38,
+                color: RouletteColor::Green
+            })
+        );
+        assert_eq!(
+            RouletteNumber::new(1),
+            Some(RouletteNumber {
+                number: 1,
+                color: RouletteColor::Red
+            })
+        );
+        assert_eq!(
+            RouletteNumber::new(2),
+            Some(RouletteNumber {
+                number: 2,
+                color: RouletteColor::Black
+            })
+        );
+        assert_eq!(RouletteNumber::new(39), None);
+    }
+
+    #[test]
+    fn test_wheel_numbers() {
+        let american_wheel = WheelType::American;
+        assert_eq!(american_wheel.numbers().len(), 38); // 0-36 + 00 (37)
+
+        let european_wheel = WheelType::European;
+        assert_eq!(european_wheel.numbers().len(), 37); // 0-36
+
+        let triple_zero_wheel = WheelType::TripleZero;
+        assert_eq!(triple_zero_wheel.numbers().len(), 39); // 0-36 + 00 (37) + 000 (38)
+    }
+
+    #[test]
+    fn test_wheel_spin_american() {
+        let wheel = RouletteWheel::new(WheelType::American);
+        for _ in 0..100 {
+            let result = wheel.spin();
+            assert!(result.number <= 38);
+        }
+    }
+
+    #[test]
+    fn test_wheel_spin_european() {
+        let wheel = RouletteWheel::new(WheelType::European);
+        for _ in 0..100 {
+            let result = wheel.spin();
+            assert!(result.number <= 36);
+        }
+    }
+
+    #[test]
+    fn test_wheel_spin_triple_zero() {
+        let wheel = RouletteWheel::new(WheelType::TripleZero);
+        for _ in 0..100 {
+            let result = wheel.spin();
+            assert!(result.number <= 38);
+        }
     }
 }
