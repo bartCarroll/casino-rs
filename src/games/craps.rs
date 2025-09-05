@@ -71,10 +71,19 @@ impl CrapsGame {
         self.advance_shooter();
     }
 
+    pub fn is_hardway(&mut self, d1: u8, d2: u8, total: u8) -> bool {
+        (d1 == d2) && (d1 == total || total == 6 || total == 8 || total == 10)
+    }
+
     pub fn come_out_roll(&mut self ){
         let d1 = dice::Die::new(6).unwrap().roll();
         let d2 = dice::Die::new(6).unwrap().roll();
+
+        // hard way check
         let total = d1+ d2;
+        if self.is_hardway(d1, d2, total) {
+            // handle hard way logic here
+        }
         match self.game_type {
             CrapsType::StandardCraps | CrapsType::EasyCraps => self.standard_craps_come_out(d1, d2, total),
             CrapsType::CraplessCraps => self.crapless_craps_come_out(d1, d2, total),
