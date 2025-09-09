@@ -1,13 +1,5 @@
 use crate::dice;
-
-#[derive(Clone)]
-pub struct Player{
-    pub name: String,
-    pub chips: u32,
-    pub is_shooter: bool,
-    pub next_player: Option<Box<Player>>,
-}
-
+use crate::player::Player;
 pub enum CrapsType {
     StandardCraps,
     CraplessCraps,
@@ -32,38 +24,22 @@ pub enum GameState {
 pub struct CrapsGame {
     pub game_type: CrapsType,
     pub game_state: GameState,
-    pub shooter: Option<Player>,
+    pub shooter: u8,
     pub players: Vec<Player>,
 }
 
 impl CrapsGame {
-    pub fn new(game_type: CrapsType, mut players: Vec<Player>) -> Self {
-        if !players.is_empty() {
-            players[0].is_shooter = true;
-
-            // Set up circular linked list
-            for i in 0..players.len() {
-                let next_index = (i + 1) % players.len();
-                players[i].next_player = Some(Box::new(players[next_index].clone()));
-            }
-        }
-
-        let current_shooter = players.first().cloned();
-
+    pub fn new(game_type: CrapsType, players: Vec<Player>) -> Self {
         CrapsGame {
             game_type,
             game_state: GameState::ComeOut,
-            shooter: current_shooter,
+            shooter: 0,
             players,
         }
     }
 
     pub fn advance_shooter(&mut self) {
-        if let Some(current_shooter) = &self.shooter {
-            if let Some(next_player) = &current_shooter.next_player {
-                self.shooter = Some((**next_player).clone());
-            }
-        }
+        self.shooter = (self.shooter + 1) % self.players.len() as u8;
     }
 
     pub fn reset_game(&mut self) {
@@ -71,7 +47,7 @@ impl CrapsGame {
         self.advance_shooter();
     }
 
-    pub fn is_hardway(&mut self, d1: u8, d2: u8, total: u8) -> bool {
+    pub fn is_hardway(&self, d1: u8, d2: u8, total: u8) -> bool {
         (d1 == d2) && (d1 == total || total == 6 || total == 8 || total == 10)
     }
 

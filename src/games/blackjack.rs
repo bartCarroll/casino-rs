@@ -67,16 +67,20 @@ pub struct BlackjackGame {
     players: Vec<Player>,
     chip_denominations: Vec<u32>, // e.g., [1, 5, 10, 25, 100, 500, 1000]
     shoe: Shoe,
+    min_bet: u32,
+    max_bet: u32,
 }
 
 impl BlackjackGame {
-    pub fn new(players: Vec<Player>, chip_denominations: Vec<u32>, num_decks: usize) -> Self {
+    pub fn new(players: Vec<Player>, chip_denominations: Vec<u32>, num_decks: usize, min_bet: u32, max_bet: u32) -> Self {
         let shoe = Shoe::new(num_decks);
         Self {
             dealer: Dealer { face_down_card: None, dealer_hand: vec![] },
             players,
             chip_denominations,
             shoe,
+            min_bet,
+            max_bet,
         }
     }
 
