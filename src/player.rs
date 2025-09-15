@@ -1,11 +1,11 @@
 use std::collections::HashMap;
-use crate::token::Token;
+use crate::bet::Chip;
 
 #[derive(Clone)]
 pub struct Player {
     pub name: String,
     /// map token -> count
-    wallet: HashMap<Token, u32>,
+    wallet: HashMap<Chip, u32>,
 }
 
 impl Player {
@@ -16,17 +16,17 @@ impl Player {
         }
     }
 
-    pub fn deposit(&mut self, token: Token, count: u32) {
+    pub fn deposit(&mut self, token: Chip, count: u32) {
         *self.wallet.entry(token).or_insert(0) += count;
     }
 
-    pub fn deposit_multiple(&mut self, tokens: HashMap<Token, u32>) {
+    pub fn deposit_multiple(&mut self, tokens: HashMap<Chip, u32>) {
         tokens.iter().for_each(|(token, count)| {
             self.deposit(token.clone(), *count);
         });
     }
 
-    pub fn withdraw(&mut self, token: &Token, count: u32) -> Result<(), &'static str> {
+    pub fn withdraw(&mut self, token: &Chip, count: u32) -> Result<(), &'static str> {
         match self.wallet.get_mut(token) {
             Some(n) if *n >= count => {
                 *n -= count;
@@ -39,7 +39,7 @@ impl Player {
         }
     }
 
-    pub fn token_count(&self, token: &Token) -> u32 {
+    pub fn token_count(&self, token: &Chip) -> u32 {
         *self.wallet.get(token).unwrap_or(&0)
     }
 
@@ -62,11 +62,11 @@ mod tests {
     use super::*;
     use std::collections::HashMap;
 
-    fn sample_tokens() -> (Token, Token, Token, Token) {
-        let quarter = Token { name: "quarter".to_string(), display: "25¢".to_string(), value_cents: 25 };
-        let ones_chip = Token { name: "one dollar".to_string(), display: "$1".to_string(), value_cents: 100 };
-        let fives_chip = Token { name: "five dollar".to_string(), display: "$5".to_string(), value_cents: 500 };
-        let tens_chip = Token { name: "ten dollar".to_string(), display: "$10".to_string(), value_cents: 1000 };
+    fn sample_tokens() -> (Chip, Chip, Chip, Chip) {
+        let quarter = Chip { name: "quarter".to_string(), display: "25¢".to_string(), value_cents: 25 };
+        let ones_chip = Chip { name: "one dollar".to_string(), display: "$1".to_string(), value_cents: 100 };
+        let fives_chip = Chip { name: "five dollar".to_string(), display: "$5".to_string(), value_cents: 500 };
+        let tens_chip = Chip { name: "ten dollar".to_string(), display: "$10".to_string(), value_cents: 1000 };
         (quarter, ones_chip, fives_chip, tens_chip)
     }
 

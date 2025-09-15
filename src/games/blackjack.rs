@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use crate::cards::Shoe;
 use crate::cards::Card;
+use crate::player::Player;
+use crate::bet::Chip;
 
 pub enum GameState {
     WaitingForBets,
@@ -17,46 +19,64 @@ pub enum Error {
 }
 
 
-pub struct DealerHand{
-
+pub struct Hand {
+    cards: Vec<Card>,
+    bet: HashMap<Chip, u32>
 }
 
-pub struct Player {
-    name: String,
-    chips: HashMap<u32, u32>, // Map of chip denomination to quantity
-    hand: HashMap<Vec<Card>, HashMap<u32, u32>> // Map of hand to bet (denomination to quantity)
-}
-
-impl Player {
-    pub fn new(name: String, starting_chips: HashMap<u32, u32>) -> Self {
-        Self { name, chips: starting_chips, hand: HashMap::new() }
-    }
-
-    pub fn total_value(&self) -> u32 {
-        self.chips.iter().map(|(denom, count)| denom * count).sum()
-    }
-
-    pub fn has_chips(&self, amount: u32) -> bool {
-        self.total_value() >= amount
-    }
-
-    pub fn place_initial_bet(&mut self, bet: HashMap<u32, u32>) -> Result<(), Error> {
-        let total_bet: u32 = bet.iter().map(|(denom, count)| denom * count).sum();
-        if self.has_chips(total_bet) {
-            for (denom, count) in bet.clone() {
-                *self.chips.entry(denom).or_insert(0) -= count;
+impl Hand {
+    pub fn value(&self) -> u8 {
+        let mut total = 0;
+        let mut aces = 0;
+        for card in &self.cards {
+            match card.rank {
+                crate::cards::Rank::Two => total += 2,
+                crate::cards::Rank::Three => total += 3,
+                crate::cards::Rank::Four => total += 4,
+                crate::cards::Rank::Five => total += 5,
+                crate::cards::Rank::Six => total += 6,
+                crate::cards::Rank::Seven => total += 7,
+                crate::cards::Rank::Eight => total += 8,
+                crate::cards::Rank::Nine => total += 9,
+                crate::cards::Rank::Ten | crate::cards::Rank::Jack | crate::cards::Rank::Queen | crate::cards::Rank::King => total += 10,
+                crate::cards::Rank::Ace => {
+                    aces += 1;
+                    total += 11; // initially count ace as 11
+                }
             }
-            // Assuming initial bet is placed on an empty hand
-            self.hand.insert(vec![], bet.clone());
-            Ok(())
-        } else {
-            Err(Error::InsufficientChips)
+        }
+        // adjust for aces if total > 21
+        while total > 21 && aces > 0 {
+            total -= 10; // count one ace as 1 instead of 11
+            aces -= 1;
+        }
+        total
+    }
+
+    pub fn is_blackjack(&self) -> bool {
+        self.cards.len() == 2 && self.value() == 21
+    }
+
+    pub fn is_bust(&self) -> bool {
+        self.value() > 21
+    }
+}
+
+pub struct PlayerSeat {
+    player: Player,
+    hands: Vec<Hand>, // multiple when splitting
+    is_active: bool,  // whether the player is still in the round
+}
+
+impl PlayerSeat {
+    pub fn new(player: Player) -> Self {
+        Self {
+            player,
+            hands: vec![],
+            is_active: true,
         }
     }
-
 }
-
-
 pub struct Dealer {
     face_down_card: Option<Card>,
     dealer_hand: Vec<Card>,
@@ -64,20 +84,19 @@ pub struct Dealer {
 
 pub struct BlackjackGame {
     dealer: Dealer,
-    players: Vec<Player>,
-    chip_denominations: Vec<u32>, // e.g., [1, 5, 10, 25, 100, 500, 1000]
+    players: Vec<PlayerSeat>,
     shoe: Shoe,
     min_bet: u32,
     max_bet: u32,
 }
 
 impl BlackjackGame {
-    pub fn new(players: Vec<Player>, chip_denominations: Vec<u32>, num_decks: usize, min_bet: u32, max_bet: u32) -> Self {
+    pub fn new(players: Vec<Player>, num_decks: usize, min_bet: u32, max_bet: u32) -> Self {
         let shoe = Shoe::new(num_decks);
+        let players = players.into_iter().map(PlayerSeat::new).collect();
         Self {
             dealer: Dealer { face_down_card: None, dealer_hand: vec![] },
             players,
-            chip_denominations,
             shoe,
             min_bet,
             max_bet,
@@ -92,19 +111,49 @@ impl BlackjackGame {
         self.shoe.shoe.len()
     }
 
+    pub fn place_initial_bet(&mut self, player_index: usize, bet: HashMap<Chip, u32>) -> Result<(), Error> {
+        if player_index >= self.players.len() {
+            return Err(Error::InsufficientChips);
+        }
+        let total_bet: u32 = bet.values().sum();
+        if total_bet < self.min_bet || total_bet > self.max_bet {
+            return Err(Error::InsufficientChips);
+        }
+        // Here you would also check if the player has enough chips in their wallet
+        self.players[player_index].hands.push(Hand { cards: vec![], bet });
+        Ok(())
+    }
     pub fn deal_initial_cards(&mut self) {
         for player in &mut self.players {
-            // each player gets one card
+            if let Some(card1) = self.shoe.deal() {
+                if let Some(hand) = player.hands.get_mut(0) {
+                    hand.cards.push(card1);
+                }
+            }
         }
         // dealer gets one face down card
         self.dealer.face_down_card = Some(self.shoe.deal().unwrap());
-        // players each get one more card
-        // dealer gets one more card face up
-        if let Some(card1) = self.shoe.deal() {
-            self.dealer.dealer_hand.push(card1);
+        for player in &mut self.players {
+            if let Some(card2) = self.shoe.deal() {
+                if let Some(hand) = player.hands.get_mut(0) {
+                    hand.cards.push(card2);
+                }
+            }
         }
-        if let Some(card2) = self.shoe.deal() {
-            self.dealer.face_down_card = Some(card2);
+        // dealer gets one face up card
+        if let Some(card) = self.shoe.deal() {
+            self.dealer.dealer_hand.push(card);
+        }
+    }
+
+    pub fn play(&mut self) {
+        self.deal_initial_cards();
+        // is dealer showing an Ace?
+        let dealer_upcard = self.dealer.dealer_hand.get(0);
+        let dealer_upcard_is_ace = matches!(dealer_upcard, Some(card) if card.rank == crate::cards::Rank::Ace);
+        if dealer_upcard_is_ace {
+            // TODO: implement insurance logic
+
         }
     }
 

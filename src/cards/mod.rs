@@ -71,17 +71,27 @@ impl Rank {
             Rank::Ace,
         ]
     }
-}
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub struct Card {
-    pub suit: Suit,
-    pub rank: Rank,
-}
+    pub fn display(&self) -> &'static str {
+        match self {
+            Rank::Two => "2",
+            Rank::Three => "3",
+            Rank::Four => "4",
+            Rank::Five => "5",
+            Rank::Six => "6",
+            Rank::Seven => "7",
+            Rank::Eight => "8",
+            Rank::Nine => "9",
+            Rank::Ten => "10",
+            Rank::Jack => "J",
+            Rank::Queen => "Q",
+            Rank::King => "K",
+            Rank::Ace => "A",
+        }
+    }
 
-impl Card{
     pub fn value(&self) -> u8 {
-        match self.rank {
+        match self {
             Rank::Two => 2,
             Rank::Three => 3,
             Rank::Four => 4,
@@ -95,9 +105,20 @@ impl Card{
         }
     }
 }
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct Card {
+    pub suit: Suit,
+    pub rank: Rank,
+}
+
 impl Card {
     pub fn new(suit: Suit, rank: Rank) -> Self {
         Card { suit, rank }
+    }
+
+    pub fn value(&self) -> u8 {
+        self.rank.value()
     }
 
     pub fn display(&self) -> String {
@@ -124,6 +145,15 @@ impl Card {
         };
         format!("{}{}", rank_str, suit_str)
     }
+
+    pub fn is_face_card(&self) -> bool {
+        matches!(self.rank, Rank::Jack | Rank::Queen | Rank::King)
+    }
+
+    pub fn is_ace(&self) -> bool {
+        self.rank == Rank::Ace
+    }
+
 }
 
 #[derive(Clone, Debug, PartialEq)]

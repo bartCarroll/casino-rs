@@ -4,4 +4,4 @@ pub mod roulette;
 pub mod slots;
 pub mod games;
 pub mod player;
-pub mod token;
+pub mod bet;
