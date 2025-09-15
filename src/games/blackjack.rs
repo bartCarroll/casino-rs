@@ -26,23 +26,12 @@ pub struct Hand {
 
 impl Hand {
     pub fn value(&self) -> u8 {
-        let mut total = 0;
+        let mut total: u8 = 0;
         let mut aces = 0;
         for card in &self.cards {
-            match card.rank {
-                crate::cards::Rank::Two => total += 2,
-                crate::cards::Rank::Three => total += 3,
-                crate::cards::Rank::Four => total += 4,
-                crate::cards::Rank::Five => total += 5,
-                crate::cards::Rank::Six => total += 6,
-                crate::cards::Rank::Seven => total += 7,
-                crate::cards::Rank::Eight => total += 8,
-                crate::cards::Rank::Nine => total += 9,
-                crate::cards::Rank::Ten | crate::cards::Rank::Jack | crate::cards::Rank::Queen | crate::cards::Rank::King => total += 10,
-                crate::cards::Rank::Ace => {
-                    aces += 1;
-                    total += 11; // initially count ace as 11
-                }
+            total += card.value();
+            if card.is_ace() {
+                aces += 1;
             }
         }
         // adjust for aces if total > 21
@@ -65,7 +54,6 @@ impl Hand {
 pub struct PlayerSeat {
     player: Player,
     hands: Vec<Hand>, // multiple when splitting
-    is_active: bool,  // whether the player is still in the round
 }
 
 impl PlayerSeat {
@@ -73,8 +61,11 @@ impl PlayerSeat {
         Self {
             player,
             hands: vec![],
-            is_active: true,
         }
+    }
+
+    pub fn get_player_name(&self) -> &str{
+        &self.player.name
     }
 }
 pub struct Dealer {
@@ -149,7 +140,7 @@ impl BlackjackGame {
     pub fn play(&mut self) {
         self.deal_initial_cards();
         // is dealer showing an Ace?
-        let dealer_upcard = self.dealer.hand.get(0);
+        let dealer_upcard = self.dealer.hand.first();
         let dealer_upcard_is_ace = matches!(dealer_upcard, Some(card) if card.rank == crate::cards::Rank::Ace);
         if dealer_upcard_is_ace {
             // TODO: implement insurance logic

@@ -4,6 +4,12 @@ pub struct Bet {
     pub chips: HashMap<Chip, u32> // token -> count
 }
 
+impl Default for Bet {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Bet {
 
     pub fn new() -> Self {
