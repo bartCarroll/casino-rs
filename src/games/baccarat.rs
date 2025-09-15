@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use crate::bet::Bet;
-use crate::cards::{Card, Shoe, Suit, Rank as RankTrait, BaccaratRank as BaccaratRankTrait};
+use crate::cards::{Card, Shoe, Rank as RankTrait, BaccaratRank as BaccaratRankTrait};
 use crate::player::Player;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -278,7 +278,7 @@ impl BaccaratGame {
         let take = n.min(hist_len);
         let slice = &self.history[hist_len - take..];
 
-        let cols = (take + rows - 1) / rows;
+        let cols = take.div_ceil(rows);
         let mut grid: Vec<Vec<Option<CoupResult>>> = vec![vec![None; cols]; rows];
         for (i, &r) in slice.iter().enumerate() {
             let row = i % rows;
@@ -315,6 +315,7 @@ impl BaccaratGame {
 
 #[cfg(test)]
 mod tests {
+    use crate::cards::Suit;
     use super::*;
     #[test]
     fn test_hand_value() {
@@ -342,7 +343,17 @@ mod tests {
         let mut game = BaccaratGame::new(vec![player1, player2]);
         let result = game.play();
         assert!(matches!(result.winner, Winner::Player | Winner::Banker | Winner::Tie));
-        let result = game.play();
-        let result = game.play();
+    }
+
+    #[test]
+    fn test_baccarat_game_play_n() {
+        let player1 = Player::new("Player 1");
+        let player2 = Player::new("Player 2");
+        let mut game = BaccaratGame::new(vec![player1, player2]);
+        game.play_n(50);
+        assert_eq!(game.history.len(), 50);
+        assert!(matches!(game.history[0].winner, Winner::Player | Winner::Banker | Winner::Tie));
+        // print the bead plate
+        println!("{}", game.bead_plate_string(5, 50));
     }
 }
