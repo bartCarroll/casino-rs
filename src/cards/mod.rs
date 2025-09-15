@@ -1,4 +1,4 @@
-/// Module for card-related structures and functions
+//! Module for card-related structures and functions
 
 #[cfg(feature = "python")]
 pub mod python_bindings;
@@ -161,6 +161,12 @@ pub struct CardCollection {
     cards: Vec<Card>,
 }
 
+impl Default for CardCollection {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CardCollection {
     pub fn new() -> Self {
         CardCollection { cards: Vec::new() }
@@ -192,6 +198,12 @@ impl CardCollection {
 pub struct Deck {
     pub cards: CardCollection,
 }
+impl Default for Deck {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Deck {
     pub fn new() -> Self {
         let mut cards = CardCollection::new();

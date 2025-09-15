@@ -79,7 +79,7 @@ impl PlayerSeat {
 }
 pub struct Dealer {
     face_down_card: Option<Card>,
-    dealer_hand: Vec<Card>,
+    hand: Vec<Card>,
 }
 
 pub struct BlackjackGame {
@@ -95,7 +95,7 @@ impl BlackjackGame {
         let shoe = Shoe::new(num_decks);
         let players = players.into_iter().map(PlayerSeat::new).collect();
         Self {
-            dealer: Dealer { face_down_card: None, dealer_hand: vec![] },
+            dealer: Dealer { face_down_card: None, hand: vec![] },
             players,
             shoe,
             min_bet,
@@ -142,14 +142,14 @@ impl BlackjackGame {
         }
         // dealer gets one face up card
         if let Some(card) = self.shoe.deal() {
-            self.dealer.dealer_hand.push(card);
+            self.dealer.hand.push(card);
         }
     }
 
     pub fn play(&mut self) {
         self.deal_initial_cards();
         // is dealer showing an Ace?
-        let dealer_upcard = self.dealer.dealer_hand.get(0);
+        let dealer_upcard = self.dealer.hand.get(0);
         let dealer_upcard_is_ace = matches!(dealer_upcard, Some(card) if card.rank == crate::cards::Rank::Ace);
         if dealer_upcard_is_ace {
             // TODO: implement insurance logic

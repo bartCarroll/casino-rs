@@ -61,12 +61,12 @@ impl CrapsGame {
             // handle hard way logic here
         }
         match self.game_type {
-            CrapsType::StandardCraps | CrapsType::EasyCraps => self.standard_craps_come_out(d1, d2, total),
-            CrapsType::CraplessCraps => self.crapless_craps_come_out(d1, d2, total),
+            CrapsType::StandardCraps | CrapsType::EasyCraps => self.standard_craps_come_out(total),
+            CrapsType::CraplessCraps => self.crapless_craps_come_out(total),
         }
     }
 
-    pub fn standard_craps_come_out(&mut self, d1: u8, d2: u8, total: u8) {
+    pub fn standard_craps_come_out(&mut self, total: u8) {
         match total {
             7 | 11 => self.game_state = GameState::NaturalWin,
             2 | 3 | 12 => self.game_state = GameState::Craps,
@@ -75,7 +75,7 @@ impl CrapsGame {
         }
     }
 
-    pub fn crapless_craps_come_out(&mut self, d1: u8, d2: u8, total: u8) {
+    pub fn crapless_craps_come_out(&mut self, total: u8) {
         match total {
             7 | 11 => self.game_state = GameState::NaturalWin,
             2 | 3 | 4 | 5 | 6 | 8 | 9 | 10 | 12 => self.game_state = GameState::PointSet(total),
