@@ -33,12 +33,166 @@ impl Suit {
             Suit::Clubs | Suit::Spades => "Black",
         }
     }
-
 }
 
+// Core trait for card ranks; games can define their own enums implementing this.
+pub trait Rank: Copy + Clone + core::fmt::Debug + PartialEq + Eq + core::hash::Hash + 'static {
+    fn all() -> &'static [Self]
+    where
+        Self: Sized;
+    fn display(&self) -> &'static str;
+    fn is_face(&self) -> bool;
+}
+
+// Optional: extra behavior needed for Blackjack
+pub trait BlackjackRank: Rank {
+    fn blackjack_value(&self) -> u8;
+    fn is_ace(&self) -> bool;
+}
+
+// Optional: extra behavior needed for Baccarat
+pub trait BaccaratRank: Rank {
+    fn baccarat_value(&self) -> u8;
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub enum Rank {
+pub struct Card<R: Rank> {
+    pub suit: Suit,
+    pub rank: R,
+}
+
+impl<R: Rank> Card<R> {
+    pub fn new(suit: Suit, rank: R) -> Self {
+        Card { suit, rank }
+    }
+
+    pub fn display(&self) -> String {
+        format!("{}{}", self.rank.display(), self.suit.symbol())
+    }
+
+    pub fn is_face_card(&self) -> bool {
+        self.rank.is_face()
+    }
+}
+
+// Blackjack-specific helpers available when the rank supports Blackjack rules
+impl<R: BlackjackRank> Card<R> {
+    pub fn value(&self) -> u8 {
+        self.rank.blackjack_value()
+    }
+    pub fn is_ace(&self) -> bool {
+        self.rank.is_ace()
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct CardCollection<R: Rank> {
+    pub(crate) cards: Vec<Card<R>>,
+}
+
+impl<R: Rank> Default for CardCollection<R> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<R: Rank> CardCollection<R> {
+    pub fn new() -> Self {
+        CardCollection { cards: Vec::new() }
+    }
+
+    pub fn shuffle(&mut self) {
+        use rand::seq::SliceRandom;
+        let mut rng = rng();
+        self.cards.shuffle(&mut rng);
+    }
+
+    pub fn deal(&mut self) -> Option<Card<R>> {
+        self.cards.pop()
+    }
+
+    pub fn push(&mut self, card: Card<R>) {
+        self.cards.push(card);
+    }
+
+    pub fn len(&self) -> usize {
+        self.cards.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.cards.is_empty()
+    }
+}
+
+pub struct Deck<R: Rank> {
+    pub cards: CardCollection<R>,
+}
+
+impl<R: Rank> Default for Deck<R> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<R: Rank> Deck<R> {
+    pub fn new() -> Self {
+        let mut cards = CardCollection::new();
+        for &suit in Suit::all() {
+            for &rank in R::all() {
+                cards.push(Card::new(suit, rank));
+            }
+        }
+        Deck { cards }
+    }
+
+    pub fn shuffle(&mut self) {
+        self.cards.shuffle();
+    }
+
+    pub fn deal(&mut self) -> Option<Card<R>> {
+        self.cards.deal()
+    }
+}
+
+pub struct Shoe<R: Rank> {
+    pub shoe: CardCollection<R>,
+}
+
+impl<R: Rank> Shoe<R> {
+    pub fn new(num_decks: usize) -> Self {
+        let mut shoe = CardCollection::new();
+        for _ in 0..num_decks {
+            for &suit in Suit::all() {
+                for &rank in R::all() {
+                    shoe.push(Card::new(suit, rank));
+                }
+            }
+        }
+        Shoe { shoe }
+    }
+
+    pub fn shuffle(&mut self) {
+        self.shoe.shuffle();
+    }
+
+    pub fn deal(&mut self) -> Option<Card<R>> {
+        self.shoe.deal()
+    }
+
+    pub fn len(&self) -> usize {
+        self.shoe.len()
+    }
+}
+
+// A generic Hand type if needed by callers; games often define their own.
+pub struct Hand<R: Rank> {
+    pub cards: Vec<Card<R>>,
+}
+
+// A default rank implementation that mirrors a standard 13-rank deck.
+// This is useful for tests and callers that don't define a custom rank.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum StandardRank {
     Two,
     Three,
     Four,
@@ -53,208 +207,85 @@ pub enum Rank {
     King,
     Ace,
 }
-impl Rank {
-    pub fn all() -> &'static [Rank] {
+
+impl Rank for StandardRank {
+    fn all() -> &'static [Self] {
         &[
-            Rank::Two,
-            Rank::Three,
-            Rank::Four,
-            Rank::Five,
-            Rank::Six,
-            Rank::Seven,
-            Rank::Eight,
-            Rank::Nine,
-            Rank::Ten,
-            Rank::Jack,
-            Rank::Queen,
-            Rank::King,
-            Rank::Ace,
+            StandardRank::Two,
+            StandardRank::Three,
+            StandardRank::Four,
+            StandardRank::Five,
+            StandardRank::Six,
+            StandardRank::Seven,
+            StandardRank::Eight,
+            StandardRank::Nine,
+            StandardRank::Ten,
+            StandardRank::Jack,
+            StandardRank::Queen,
+            StandardRank::King,
+            StandardRank::Ace,
         ]
     }
 
-    pub fn display(&self) -> &'static str {
+    fn display(&self) -> &'static str {
         match self {
-            Rank::Two => "2",
-            Rank::Three => "3",
-            Rank::Four => "4",
-            Rank::Five => "5",
-            Rank::Six => "6",
-            Rank::Seven => "7",
-            Rank::Eight => "8",
-            Rank::Nine => "9",
-            Rank::Ten => "10",
-            Rank::Jack => "J",
-            Rank::Queen => "Q",
-            Rank::King => "K",
-            Rank::Ace => "A",
+            StandardRank::Two => "2",
+            StandardRank::Three => "3",
+            StandardRank::Four => "4",
+            StandardRank::Five => "5",
+            StandardRank::Six => "6",
+            StandardRank::Seven => "7",
+            StandardRank::Eight => "8",
+            StandardRank::Nine => "9",
+            StandardRank::Ten => "10",
+            StandardRank::Jack => "J",
+            StandardRank::Queen => "Q",
+            StandardRank::King => "K",
+            StandardRank::Ace => "A",
         }
     }
 
-    pub fn value(&self) -> u8 {
+    fn is_face(&self) -> bool {
+        matches!(self, StandardRank::Jack | StandardRank::Queen | StandardRank::King)
+    }
+}
+
+impl BlackjackRank for StandardRank {
+    fn blackjack_value(&self) -> u8 {
         match self {
-            Rank::Two => 2,
-            Rank::Three => 3,
-            Rank::Four => 4,
-            Rank::Five => 5,
-            Rank::Six => 6,
-            Rank::Seven => 7,
-            Rank::Eight => 8,
-            Rank::Nine => 9,
-            Rank::Ten | Rank::Jack | Rank::Queen | Rank::King => 10,
-            Rank::Ace => 11, // Ace can also be 1, but we'll handle that in game logic
+            StandardRank::Two => 2,
+            StandardRank::Three => 3,
+            StandardRank::Four => 4,
+            StandardRank::Five => 5,
+            StandardRank::Six => 6,
+            StandardRank::Seven => 7,
+            StandardRank::Eight => 8,
+            StandardRank::Nine => 9,
+            StandardRank::Ten | StandardRank::Jack | StandardRank::Queen | StandardRank::King => 10,
+            StandardRank::Ace => 11, // Count adjustment handled by blackjack logic
         }
     }
-}
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub struct Card {
-    pub suit: Suit,
-    pub rank: Rank,
-}
-
-impl Card {
-    pub fn new(suit: Suit, rank: Rank) -> Self {
-        Card { suit, rank }
-    }
-
-    pub fn value(&self) -> u8 {
-        self.rank.value()
-    }
-
-    pub fn display(&self) -> String {
-        let rank_str = match self.rank {
-            Rank::Two => "2",
-            Rank::Three => "3",
-            Rank::Four => "4",
-            Rank::Five => "5",
-            Rank::Six => "6",
-            Rank::Seven => "7",
-            Rank::Eight => "8",
-            Rank::Nine => "9",
-            Rank::Ten => "10",
-            Rank::Jack => "J",
-            Rank::Queen => "Q",
-            Rank::King => "K",
-            Rank::Ace => "A",
-        };
-        let suit_str = match self.suit {
-            Suit::Hearts => "♥",
-            Suit::Diamonds => "♦",
-            Suit::Clubs => "♣",
-            Suit::Spades => "♠",
-        };
-        format!("{}{}", rank_str, suit_str)
-    }
-
-    pub fn is_face_card(&self) -> bool {
-        matches!(self.rank, Rank::Jack | Rank::Queen | Rank::King)
-    }
-
-    pub fn is_ace(&self) -> bool {
-        self.rank == Rank::Ace
-    }
-
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct CardCollection {
-    cards: Vec<Card>,
-}
-
-impl Default for CardCollection {
-    fn default() -> Self {
-        Self::new()
+    fn is_ace(&self) -> bool {
+        matches!(self, StandardRank::Ace)
     }
 }
 
-impl CardCollection {
-    pub fn new() -> Self {
-        CardCollection { cards: Vec::new() }
-    }
-
-    pub fn shuffle(&mut self) {
-        use rand::seq::SliceRandom;
-        let mut rng = rng();
-        self.cards.shuffle(&mut rng);
-    }
-
-    pub fn deal(&mut self) -> Option<Card> {
-        self.cards.pop()
-    }
-
-    pub fn push(&mut self, card: Card) {
-        self.cards.push(card);
-    }
-
-    pub fn len(&self) -> usize {
-        self.cards.len()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.cards.is_empty()
-    }
-}
-
-pub struct Deck {
-    pub cards: CardCollection,
-}
-impl Default for Deck {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl Deck {
-    pub fn new() -> Self {
-        let mut cards = CardCollection::new();
-        for &suit in Suit::all() {
-            for &rank in Rank::all() {
-                cards.push(Card::new(suit, rank));
-            }
+impl BaccaratRank for StandardRank {
+    fn baccarat_value(&self) -> u8 {
+        match self {
+            StandardRank::Two => 2,
+            StandardRank::Three => 3,
+            StandardRank::Four => 4,
+            StandardRank::Five => 5,
+            StandardRank::Six => 6,
+            StandardRank::Seven => 7,
+            StandardRank::Eight => 8,
+            StandardRank::Nine => 9,
+            StandardRank::Ten | StandardRank::Jack | StandardRank::Queen | StandardRank::King => 0,
+            StandardRank::Ace => 1,
         }
-        Deck { cards }
     }
-
-    pub fn shuffle(&mut self) {
-        self.cards.shuffle();
-    }
-
-    pub fn deal(&mut self) -> Option<Card> {
-        self.cards.deal()
-    }
-}
-
-pub struct Shoe {
-    pub shoe: CardCollection,
-}
-impl Shoe {
-    pub fn new(num_decks: usize) -> Self {
-        let mut shoe = CardCollection::new();
-        for _ in 0..num_decks {
-            for &suit in Suit::all() {
-                for &rank in Rank::all() {
-                    shoe.push(Card::new(suit, rank));
-                }
-            }
-        }
-        Shoe { shoe }
-    }
-
-    pub fn shuffle(&mut self) {
-        self.shoe.shuffle();
-    }
-
-    pub fn deal(&mut self) -> Option<Card> {
-        self.shoe.deal()
-    }
-
-    pub fn len(&self) -> usize {
-        self.shoe.len()
-    }
-}
-
-pub struct Hand {
-    pub cards: Vec<Card>,
 }
 
 #[cfg(test)]
@@ -263,26 +294,27 @@ mod tests {
 
     #[test]
     fn test_card_value() {
-        let card = Card::new(Suit::Hearts, Rank::Ace);
+        let card = Card::<StandardRank>::new(Suit::Hearts, StandardRank::Ace);
+        // Uses blackjack values by default when calling value()
         assert_eq!(card.value(), 11);
 
-        let card = Card::new(Suit::Spades, Rank::Ten);
+        let card = Card::<StandardRank>::new(Suit::Spades, StandardRank::Ten);
         assert_eq!(card.value(), 10);
 
-        let card = Card::new(Suit::Diamonds, Rank::Three);
+        let card = Card::<StandardRank>::new(Suit::Diamonds, StandardRank::Three);
         assert_eq!(card.value(), 3);
     }
 
     #[test]
     fn test_deck_creation() {
-        let deck = Deck::new();
+        let deck = Deck::<StandardRank>::new();
         assert_eq!(deck.cards.len(), 52);
     }
 
     #[test]
     fn test_deck_shuffle() {
-        let mut deck1 = Deck::new();
-        let mut deck2 = Deck::new();
+        let mut deck1 = Deck::<StandardRank>::new();
+        let mut deck2 = Deck::<StandardRank>::new();
         deck1.shuffle();
         deck2.shuffle();
         // There's a small chance they could be the same after shuffling, but it's very unlikely
@@ -291,7 +323,7 @@ mod tests {
 
     #[test]
     fn test_deal_card() {
-        let mut deck = Deck::new();
+        let mut deck = Deck::<StandardRank>::new();
         let initial_len = deck.cards.len();
         let card = deck.deal();
         assert!(card.is_some());
@@ -300,14 +332,14 @@ mod tests {
 
     #[test]
     fn test_shoe_creation() {
-        let shoe = Shoe::new(6);
+        let shoe = Shoe::<StandardRank>::new(6);
         assert_eq!(shoe.shoe.len(), 52 * 6);
     }
 
     #[test]
     fn test_shoe_shuffle() {
-        let mut shoe1 = Shoe::new(6);
-        let mut shoe2 = Shoe::new(6);
+        let mut shoe1 = Shoe::<StandardRank>::new(6);
+        let mut shoe2 = Shoe::<StandardRank>::new(6);
         shoe1.shuffle();
         shoe2.shuffle();
         assert_ne!(shoe1.shoe, shoe2.shoe);
@@ -315,10 +347,11 @@ mod tests {
 
     #[test]
     fn test_deal_from_shoe() {
-        let mut shoe = Shoe::new(6);
+        let mut shoe = Shoe::<StandardRank>::new(6);
         let initial_len = shoe.shoe.len();
         let card = shoe.deal();
         assert!(card.is_some());
         assert_eq!(shoe.shoe.len(), initial_len - 1);
     }
+
 }

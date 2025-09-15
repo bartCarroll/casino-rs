@@ -1,8 +1,87 @@
 use std::collections::HashMap;
-use crate::cards::Shoe;
-use crate::cards::Card;
+use crate::cards::{Card, Shoe, Rank as RankTrait, BlackjackRank as BlackjackRankTrait};
 use crate::player::Player;
 use crate::bet::Chip;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum BJRank {
+    Two,
+    Three,
+    Four,
+    Five,
+    Six,
+    Seven,
+    Eight,
+    Nine,
+    Ten,
+    Jack,
+    Queen,
+    King,
+    Ace,
+}
+
+impl RankTrait for BJRank {
+    fn all() -> &'static [Self] {
+        &[
+            BJRank::Two,
+            BJRank::Three,
+            BJRank::Four,
+            BJRank::Five,
+            BJRank::Six,
+            BJRank::Seven,
+            BJRank::Eight,
+            BJRank::Nine,
+            BJRank::Ten,
+            BJRank::Jack,
+            BJRank::Queen,
+            BJRank::King,
+            BJRank::Ace,
+        ]
+    }
+
+    fn display(&self) -> &'static str {
+        match self {
+            BJRank::Two => "2",
+            BJRank::Three => "3",
+            BJRank::Four => "4",
+            BJRank::Five => "5",
+            BJRank::Six => "6",
+            BJRank::Seven => "7",
+            BJRank::Eight => "8",
+            BJRank::Nine => "9",
+            BJRank::Ten => "10",
+            BJRank::Jack => "J",
+            BJRank::Queen => "Q",
+            BJRank::King => "K",
+            BJRank::Ace => "A",
+        }
+    }
+
+    fn is_face(&self) -> bool {
+        matches!(self, BJRank::Jack | BJRank::Queen | BJRank::King)
+    }
+}
+
+impl BlackjackRankTrait for BJRank {
+    fn blackjack_value(&self) -> u8 {
+        match self {
+            BJRank::Two => 2,
+            BJRank::Three => 3,
+            BJRank::Four => 4,
+            BJRank::Five => 5,
+            BJRank::Six => 6,
+            BJRank::Seven => 7,
+            BJRank::Eight => 8,
+            BJRank::Nine => 9,
+            BJRank::Ten | BJRank::Jack | BJRank::Queen | BJRank::King => 10,
+            BJRank::Ace => 11,
+        }
+    }
+
+    fn is_ace(&self) -> bool {
+        matches!(self, BJRank::Ace)
+    }
+}
 
 pub enum GameState {
     WaitingForBets,
@@ -18,9 +97,8 @@ pub enum Error {
     InsufficientChips,
 }
 
-
 pub struct Hand {
-    cards: Vec<Card>,
+    cards: Vec<Card<BJRank>>,
     bet: HashMap<Chip, u32>
 }
 
@@ -69,21 +147,21 @@ impl PlayerSeat {
     }
 }
 pub struct Dealer {
-    face_down_card: Option<Card>,
-    hand: Vec<Card>,
+    face_down_card: Option<Card<BJRank>>,
+    hand: Vec<Card<BJRank>>,
 }
 
 pub struct BlackjackGame {
     dealer: Dealer,
     players: Vec<PlayerSeat>,
-    shoe: Shoe,
+    shoe: Shoe<BJRank>,
     min_bet: u32,
     max_bet: u32,
 }
 
 impl BlackjackGame {
     pub fn new(players: Vec<Player>, num_decks: usize, min_bet: u32, max_bet: u32) -> Self {
-        let shoe = Shoe::new(num_decks);
+        let shoe = Shoe::<BJRank>::new(num_decks);
         let players = players.into_iter().map(PlayerSeat::new).collect();
         Self {
             dealer: Dealer { face_down_card: None, hand: vec![] },
@@ -141,7 +219,7 @@ impl BlackjackGame {
         self.deal_initial_cards();
         // is dealer showing an Ace?
         let dealer_upcard = self.dealer.hand.first();
-        let dealer_upcard_is_ace = matches!(dealer_upcard, Some(card) if card.rank == crate::cards::Rank::Ace);
+        let dealer_upcard_is_ace = matches!(dealer_upcard, Some(card) if card.is_ace());
         if dealer_upcard_is_ace {
             // TODO: implement insurance logic
 
